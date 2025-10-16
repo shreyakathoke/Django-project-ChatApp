@@ -1,0 +1,85 @@
+{% extends "chatapp/chat_home.html" %}
+{% load static %}
+
+{% block chat_content %}
+<div class="chat-header">
+    <img src="{% static 'images/avatar2.png' %}" alt="{{ other_user.username }}">
+    <div class="chat-user-name">{{ other_user.username }}</div>
+</div>
+
+<div class="chat-messages" id="chat-messages">
+    {% for msg in messages %}
+        {% if msg.sender == request.user %}
+            <div class="message sent">{{ msg.content }}</div>
+        {% else %}
+            <div class="message received">{{ msg.content }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<div class="chat-input">
+    <input type="text" id="chat-input" placeholder="Type a message">
+    <button id="send-btn" data-receiver="{{ other_user.id }}">
+        <i class="fas fa-paper-plane"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('send-btn').addEventListener('click', () => {
+    const input = document.getElementById('chat-input');
+    const content = input.value.trim();
+    const receiver_id = document.getElementById('send-btn').getAttribute('data-receiver');
+
+    if(content !== '') {
+        fetch("{% url 'chatapp:send_message' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: `receiver_id=${receiver_id}&content=${encodeURIComponent(content)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                const messagesDiv = document.getElementById('chat-messages');
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add('message','sent');
+                msgDiv.innerText = data.message;
+                messagesDiv.appendChild(msgDiv);
+                input.value = '';
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        });
+    }
+});
+
+// Optional: Press Enter to send message
+document.getElementById('chat-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('send-btn').click();
+    }
+});
+
+// Auto-refresh messages every 3 seconds
+setInterval(() => {
+    fetch("{% url 'chatapp:get_messages' other_user.id %}")
+    .then(res => res.json())
+    .then(data => {
+        const messagesDiv = document.getElementById('chat-messages');
+        messagesDiv.innerHTML = '';
+        data.messages.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', msg.sender === "{{ request.user.username }}" ? 'sent' : 'received');
+            msgDiv.innerText = msg.content;
+            messagesDiv.appendChild(msgDiv);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+}, 3000); // refresh every 3 seconds
+
+</script>
+{% endblock %}
