@@ -14,7 +14,7 @@ https://www.youtube.com/watch?v=vzPBrUIFooI
 
 
 |-------------|-----------|
-(screenshots/chatapp.png) |
+(screenshots/ChatApp.png) |
 
 ---
 
